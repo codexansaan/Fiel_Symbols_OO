@@ -1,0 +1,37 @@
+  METHOD cargar_excel.
+
+    DATA: lt_interna TYPE STANDARD TABLE OF alsmex_tabline,
+          ls_datos   TYPE ZSTY_CARS_ASA,
+          lv_column  TYPE i.
+
+    FIELD-SYMBOLS: <lv_campo> TYPE any,
+                   <ls_linea> TYPE alsmex_tabline.
+
+    CALL FUNCTION 'ALSM_EXCEL_TO_INTERNAL_TABLE'
+      EXPORTING
+        filename                = iv_path
+        i_begin_col             = 1
+        i_begin_row             = 2
+        i_end_col               = 9
+        i_end_row               = 73
+      TABLES
+        intern                  = lt_interna
+      EXCEPTIONS
+        inconsistent_parameters = 1
+        upload_ole              = 2
+        OTHERS                  = 3.
+    IF sy-subrc EQ 0.
+      LOOP AT lt_interna ASSIGNING <ls_linea>.
+        lv_column = 1 + lv_column.
+        ASSIGN COMPONENT lv_column OF STRUCTURE ls_datos TO <lv_campo>.
+        IF <lv_campo> IS ASSIGNED.
+          <lv_campo> = <ls_linea>-value.
+        ENDIF.
+
+        AT END OF row.
+          APPEND ls_datos TO ct_excel.
+          CLEAR: ls_datos, lv_column.
+        ENDAT.
+        ENDLOOP.
+      ENDIF.
+    ENDMETHOD.
