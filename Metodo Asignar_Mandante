@@ -1,0 +1,20 @@
+  METHOD asignar_mandt.
+
+    FIELD-SYMBOLS: <fs_gt_no_mand> TYPE zsty_cars_asa,
+                   <fs_tcars>      TYPE ztcars_asa.
+
+    LOOP AT gt_no_mandt ASSIGNING <fs_gt_no_mand>.
+
+      APPEND INITIAL LINE TO gt_mandt ASSIGNING <fs_tcars>.
+      <fs_tcars>-mandt = sy-mandt.
+      <fs_tcars>-id_car = <fs_gt_no_mand>-id_car.
+      <fs_tcars>-brand = <fs_gt_no_mand>-brand.
+      <fs_tcars>-model = <fs_gt_no_mand>-model.
+      <fs_tcars>-year_manufacture = <fs_gt_no_mand>-year_manufacture.
+      <fs_tcars>-price = <fs_gt_no_mand>-price.
+      <fs_tcars>-currency = <fs_gt_no_mand>-currency.
+      <fs_tcars>-serial_number = <fs_gt_no_mand>-serial_number.
+      <fs_tcars>-made_in = <fs_gt_no_mand>-made_in.
+      <fs_tcars>-class = <fs_gt_no_mand>-class.
+    ENDLOOP.
+  ENDMETHOD.
