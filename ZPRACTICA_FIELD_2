@@ -1,0 +1,149 @@
+*&---------------------------------------------------------------------*
+*& Report ZPRACTICA_FIELD_2
+*&---------------------------------------------------------------------*
+*&
+*&---------------------------------------------------------------------*
+REPORT ZPRACTICA_FIELD_2.
+INCLUDE zpractica_field_2_top.
+INCLUDE zpractica_field_2_s01.
+INCLUDE zpractica_field_2_f01.
+INCLUDE zpractica_field_2_event.
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+*&---------------------------------------------------------------------*
+*& Include          ZPRACTICA_FIELD_2_TOP
+*&---------------------------------------------------------------------*
+DATA: lo_alv        TYPE REF TO zcl_controladora_tabla_cars,
+      gt_excel      TYPE zstyt_cars_asa,
+      gt_excelmandt TYPE ztty_cars_asa.
+
+//////////////////////////////////////////////////////////////////////////////////////////////
+
+*&---------------------------------------------------------------------*
+*& Include          ZPRACTICA_FIELD_2_S01
+*&---------------------------------------------------------------------*
+SELECTION-SCREEN BEGIN OF BLOCK b1 WITH FRAME TITLE TEXT-000.
+  PARAMETERS: p_file TYPE rlgrap-filename.
+SELECTION-SCREEN END OF BLOCK b1.
+
+SELECTION-SCREEN BEGIN OF BLOCK b2 WITH FRAME TITLE TEXT-001.
+  PARAMETERS: rb_alv RADIOBUTTON GROUP alv,
+              rb_ins RADIOBUTTON GROUP alv.
+SELECTION-SCREEN END OF BLOCK b2.
+
+////////////////////////////////////////////////////////////////////////////////////////////////
+
+*&---------------------------------------------------------------------*
+*& Include          ZPRACTICA_FIELD_2_F01
+*&---------------------------------------------------------------------*
+FORM ayuda_de_busqueda CHANGING cv_path TYPE rlgrap-filename.
+
+  DATA lt_file_table TYPE filetable.
+  DATA lv_rc TYPE i.
+
+
+  cl_gui_frontend_services=>file_open_dialog( CHANGING   file_table              = lt_file_table
+                                                         rc                      = lv_rc
+                                              EXCEPTIONS file_open_dialog_failed = 1
+                                                         cntl_error              = 2
+                                                         error_no_gui            = 3
+                                                         not_supported_by_gui    = 4
+                                                         OTHERS                  = 5 ).
+
+  IF sy-subrc <> 0.
+    MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+      WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+
+  ENDIF.
+
+  TRY.
+      cv_path = lt_file_table[ 1 ]-filename.
+    CATCH cx_sy_itab_line_not_found.
+      REFRESH lt_file_table.
+  ENDTRY.
+
+ENDFORM.
+
+FORM function_alv USING gt_excel.
+
+  DATA: it_excel  TYPE TABLE OF zsty_cars_asa,
+        wa_layout TYPE slis_layout_alv.
+*
+*  wa_layout-colwidth_optimize = 'X'.
+*  wa_layout-zebra = 'X'.
+  it_excel[] = gt_excel.
+
+*  CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY'
+*    EXPORTING
+*      i_structure_name = 'ZSTY_CARS_ASA'
+*      is_layout        = wa_layout
+*    TABLES
+*      t_outtab         = it_excel
+*    EXCEPTIONS
+*      program_error    = 1
+*      OTHERS           = 2.
+*  IF sy-subrc <> 0.
+*    MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+*      WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+*  ENDIF.
+  DATA: lo_alv TYPE REF TO cl_salv_table.
+  TRY.
+    cl_salv_table=>factory(
+        IMPORTING r_salv_table = lo_alv
+        CHANGING t_table = it_excel ).
+        lo_alv->display( ).
+  CATCH CX_SALV_MSG INTO DATA(lo_error).
+    MESSAGE lo_error->get_text( ) TYPE 'I'.
+  ENDTRY.
+
+ENDFORM.
+
+
+FORM main USING iv_alv     TYPE flag
+                iv_ins     TYPE flag
+                iv_path1   TYPE rlgrap-filename.
+
+  lo_alv = NEW zcl_controladora_tabla_cars( ).
+
+  IF iv_path1 IS INITIAL.
+    MESSAGE TEXT-020 TYPE 'I'.
+  ELSE.
+      IF iv_ins EQ abap_true.
+      TRY.
+        gt_excel = lo_alv->cargar_excel( iv_path1 ).
+        gt_excelmandt = lo_alv->asignar_mandt( gt_excel ).
+        lo_alv->guardar_en_bd( gt_excelmandt ).
+        MESSAGE TEXT-023 TYPE 'I'.
+      CATCH cx_static_check INTO DATA(lo_error).
+        MESSAGE lo_error->get_text( ) TYPE 'I'.
+      ENDTRY.
+
+    ENDIF.
+    IF iv_alv EQ abap_true.
+      TRY.
+        gt_excel = lo_alv->cargar_excel( iv_path1 ).
+      PERFORM function_alv USING gt_excel.
+      CATCH cx_static_check INTO lo_error.
+        MESSAGE lo_error->get_text( ) TYPE 'I'.
+      ENDTRY.
+
+    ENDIF.
+
+  ENDIF.
+
+ENDFORM.
+
+////////////////////////////////////////////////////////////////////////////////////////
+
+*&---------------------------------------------------------------------*
+*& Include          ZPRACTICA_FIELD_2_EVENT
+*&---------------------------------------------------------------------*
+AT SELECTION-SCREEN ON VALUE-REQUEST FOR p_file.
+  PERFORM ayuda_de_busqueda CHANGING p_file.
+
+START-OF-SELECTION.
+
+    PERFORM main USING rb_alv
+                       rb_ins
+                       p_file.
