@@ -1,0 +1,3 @@
+  method GUARDAR_EN_BD.
+    MODIFY ZTCARS_ASA FROM TABLE LT_SAVE.
+  endmethod.
